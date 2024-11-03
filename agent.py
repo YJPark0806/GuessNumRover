@@ -17,7 +17,7 @@ def train_agent():
 
     # Train the agent
     print("Starting training...")
-    model.learn(total_timesteps=200)  # Set the number of timesteps for training
+    model.learn(total_timesteps=30)  # Set the number of timesteps for training
     print("Training completed.")
 
     # Save the trained model
