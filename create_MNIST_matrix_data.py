@@ -20,7 +20,7 @@ def preprocess_and_save_mnist():
 
     # Process and save only 5000 samples per digit
     for img, label in mnist_dataset:
-        if digit_counts[label] < 100:
+        if digit_counts[label] < 500:
             # Convert the 28x28 image to a 50x50 binary matrix
             img_np = img.squeeze().numpy()  # Convert Tensor to Numpy array
             resized_img = resize(img_np, (50, 50), anti_aliasing=True)
@@ -31,7 +31,7 @@ def preprocess_and_save_mnist():
             digit_counts[label] += 1
 
         # Stop processing if all digits have 5000 samples
-        if all(count == 100 for count in digit_counts.values()):
+        if all(count == 500 for count in digit_counts.values()):
             break
 
     # Save the dictionary to a .npy file in the current directory

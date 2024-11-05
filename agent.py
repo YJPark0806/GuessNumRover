@@ -7,17 +7,17 @@ from env import NumberRecognitionEnv  # Import the NumberRecognitionEnv class fr
 
 def train_agent():
     """
-    Train a PPO agent on the NumberRecognitionEnv environment.
+    Train a PPO agent on the NumberRecognitionEnv environment and log to TensorBoard.
     """
     # Initialize the custom environment
     env = NumberRecognitionEnv()
 
-    # Initialize the PPO agent
-    model = PPO("MlpPolicy", env, verbose=1)
+    # Initialize the PPO agent with TensorBoard logging
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./number_recognition_tensorboard/")
 
     # Train the agent
     print("Starting training...")
-    model.learn(total_timesteps=1000)  # Set the number of timesteps for training
+    model.learn(total_timesteps=200000, log_interval=10)  # Set the number of timesteps for training
     print("Training completed.")
 
     # Save the trained model
@@ -26,7 +26,7 @@ def train_agent():
 
     # Evaluate the trained model
     print("Evaluating the trained model...")
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
     print(f"Mean reward: {mean_reward} +/- {std_reward}")
 
 
@@ -70,3 +70,6 @@ if __name__ == "__main__":
 
     # Test the trained agent
     #test_agent()
+
+    # To visualize training in TensorBoard, run this command in your terminal:
+    # tensorboard --logdir=./number_recognition_tensorboard/

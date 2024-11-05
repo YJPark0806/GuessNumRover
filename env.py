@@ -2,6 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 class NumberRecognitionEnv(gym.Env):
     """
@@ -86,7 +87,7 @@ class NumberRecognitionEnv(gym.Env):
         x_new, y_new = self.current_position
         if self.visited_map[x_new, y_new]:
             # Apply penalty if revisiting a previously visited position
-            reward = -0.5
+            reward = -5
         else:
             # Mark the position as visited if it was not visited before
             self.visited_map[x_new, y_new] = True
@@ -100,8 +101,10 @@ class NumberRecognitionEnv(gym.Env):
         self.cumulative_reward += reward
 
         # Print the current step information
+        '''
         print(
             f"Step {self.current_step} | Current Position {self.current_position} | Probability Score {self.probabilities}")
+        '''
 
         # Check termination conditions
         done = False
@@ -190,10 +193,18 @@ class NumberRecognitionEnv(gym.Env):
 
         # Check if top 3 probabilities make up more than 90% of the total
         if np.sum(sorted_probabilities[:3]) >= 0.9 * np.sum(self.probabilities):
+            reward += 3
+        elif np.sum(sorted_probabilities[:3]) >= 0.7 * np.sum(self.probabilities):
+            reward += 2
+        elif np.sum(sorted_probabilities[:3]) >= 0.5 * np.sum(self.probabilities):
             reward += 1
 
         # Check if top 2 probabilities make up more than 90% of the total
         if np.sum(sorted_probabilities[:2]) >= 0.9 * np.sum(self.probabilities):
+            reward += 5
+        elif np.sum(sorted_probabilities[:2]) >= 0.8 * np.sum(self.probabilities):
+            reward += 4
+        elif np.sum(sorted_probabilities[:2]) >= 0.7 * np.sum(self.probabilities):
             reward += 3
 
         # Penalty for each step to encourage efficient exploration
@@ -202,9 +213,27 @@ class NumberRecognitionEnv(gym.Env):
         return reward
 
     def render(self, mode="human"):
-        # Display the current explored map
-        plt.figure(figsize=(5, 5))
-        plt.imshow(self.explored_map, cmap="gray")
-        plt.title("Explored Map")
+        # Enable interactive mode for live updates in a single window
+        plt.ion()
+
+        # Display the current explored map with the robot's current position in red
+        plt.figure(1)  # Use a single figure ID to keep the same window
+        plt.clf()  # Clear the current content to update
+
+        # Copy the explored map and highlight the current position
+        explored_map_with_robot = np.copy(self.explored_map)
+
+        # Mark the robot's current position with a distinct value, e.g., 2
+        x, y = self.current_position
+        explored_map_with_robot[x, y] = 2
+
+        # Create a custom colormap to display the robot's position in red
+        cmap = plt.cm.gray
+        cmap.set_over('red')  # Set 'over' color to red for the robot's position
+
+        plt.imshow(explored_map_with_robot, cmap=cmap, vmax=1.5)  # Use vmax=1.5 to show red for the robot position
+        plt.title(f"Explored Map - Step {self.current_step}")
         plt.axis("off")
-        plt.show()
+
+        plt.draw()  # Draw the updated figure
+        plt.pause(0.5)  # Pause briefly to allow for the update
