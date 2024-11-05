@@ -42,6 +42,10 @@ class NumberRecognitionEnv(gym.Env):
         # Initialize the explored map as a 50x50 matrix filled with -1 (unexplored)
         self.explored_map = np.full((50, 50), -1, dtype=int)
 
+        # Initialize the visited map to track visited cells
+        self.visited_map = np.zeros((50, 50), dtype=bool)  # False means unvisited, True means visited
+        self.visited_map[25, 25] = True  # Mark initial position as visited
+
         # Initialize the probabilities vector as zeros
         self.probabilities = np.zeros(10, dtype=float)
 
@@ -64,6 +68,9 @@ class NumberRecognitionEnv(gym.Env):
         # Increment the step counter
         self.current_step += 1
 
+        # Save the previous position
+        x, y = self.current_position
+
         # Handle movement actions
         if action == 0:  # Move up
             self.current_position[0] = max(0, self.current_position[0] - 1)
@@ -74,23 +81,39 @@ class NumberRecognitionEnv(gym.Env):
         elif action == 3:  # Move right
             self.current_position[1] = min(49, self.current_position[1] + 1)
 
+        # Check if the new position has been visited before
+        reward = 0
+        x_new, y_new = self.current_position
+        if self.visited_map[x_new, y_new]:
+            # Apply penalty if revisiting a previously visited position
+            reward = -0.5
+        else:
+            # Mark the position as visited if it was not visited before
+            self.visited_map[x_new, y_new] = True
+
         # Update the explored map and probabilities
         self.update_explored_map()
         self.update_probabilities()
 
-        # Calculate reward and check if episode is done
-        reward = self.calculate_reward()
+        # Calculate the additional reward (or penalty) from exploration and probabilities
+        reward += self.calculate_reward()
         self.cumulative_reward += reward
+
+        # Print the current step information
+        print(
+            f"Step {self.current_step} | Current Position {self.current_position} | Probability Score {self.probabilities}")
 
         # Check termination conditions
         done = False
-        guessed_number = np.argmax(self.probabilities)
 
-        # Check if the correct number has been identified with high confidence
-        if guessed_number == self.target_number and self.probabilities[guessed_number] > 0.95:
-            reward += 100  # Large reward for correctly identifying the number
+        # Check if the largest probability value constitutes 95% or more of the total
+        if np.max(self.probabilities) >= 0.95 * np.sum(self.probabilities) and self.current_step >= 100:
             done = True
-            print(f"Episode {self.episode_number} finished.")
+            guessed_number = np.argmax(self.probabilities)
+            if guessed_number == self.target_number:
+                reward += 100  # Additional reward for correct guess
+                print("Correct guess! +100 reward.")
+            print(f"Episode {self.episode_number} finished due to high confidence in one candidate.")
             print("Probabilities vector at episode end:", self.probabilities)
             print(f"Answer: {self.target_number}, Guessed: {guessed_number}, Return: {self.cumulative_reward}")
 
@@ -98,6 +121,7 @@ class NumberRecognitionEnv(gym.Env):
         elif self.current_step >= self.max_steps:
             done = True
             print(f"Episode {self.episode_number} terminated due to reaching max steps of {self.max_steps}.")
+            guessed_number = np.argmax(self.probabilities)
             print("Probabilities vector at max steps:", self.probabilities)
             print(f"Answer: {self.target_number}, Guessed: {guessed_number}, Return: {self.cumulative_reward}")
 
@@ -146,11 +170,13 @@ class NumberRecognitionEnv(gym.Env):
                 match_matrix = (explored_map != -1) * data_matrix  # Only consider explored parts
                 score += np.sum((explored_map == 1) * match_matrix)  # Match only where explored_map == 1 and data_matrix == 1
             probabilities[number] = score
-
+            #print(f"Score for: {number}, is: {score}")
+        '''
         # Normalize to make it a probability distribution
         total_score = np.sum(probabilities)
         if total_score > 0:
             probabilities = probabilities / total_score
+        '''
 
         return probabilities
 
@@ -158,18 +184,20 @@ class NumberRecognitionEnv(gym.Env):
         # Reward based on probabilities and exploration efficiency
         reward = 0
 
-        # Give reward for reducing candidate numbers based on probability threshold
-        for i in range(10):
-            if self.probabilities[i] < 0.05 * np.max(self.probabilities):
-                reward += 1
+        # Sort probabilities in descending order
+        sorted_probabilities = np.sort(self.probabilities)[::-1]
+        # ex) [3, 8, 5] -> [8, 5, 3]
+
+        # Check if top 3 probabilities make up more than 90% of the total
+        if np.sum(sorted_probabilities[:3]) >= 0.9 * np.sum(self.probabilities):
+            reward += 1
+
+        # Check if top 2 probabilities make up more than 90% of the total
+        if np.sum(sorted_probabilities[:2]) >= 0.9 * np.sum(self.probabilities):
+            reward += 3
 
         # Penalty for each step to encourage efficient exploration
         reward -= 0.05
-
-        # Additional reward if a candidate's probability significantly decreases
-        for i in range(10):
-            if self.probabilities[i] < 0.3 * np.max(self.probabilities):
-                reward += 3
 
         return reward
 
