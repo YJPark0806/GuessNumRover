@@ -2,6 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 class NumberRecognitionEnv(gym.Env):
     """
@@ -9,7 +10,7 @@ class NumberRecognitionEnv(gym.Env):
     This environment uses preprocessed MNIST data loaded from 'mnist_data.npy'.
     """
 
-    def __init__(self):
+    def __init__(self, seed=42):
         super(NumberRecognitionEnv, self).__init__()
 
         # Load the preprocessed MNIST data
@@ -25,13 +26,14 @@ class NumberRecognitionEnv(gym.Env):
 
         # Initialize other variables
         self.episode_number = 0  # Track episode number
-        self.max_steps = 1000  # Maximum steps per episode
+        self.max_steps = 2000  # Maximum steps per episode
         self.reset()
+
 
     def reset(self):
         # Increment episode number
-        if hasattr(self, 'episode_number'):
-            self.episode_number += 1
+        #if hasattr(self, 'episode_number'):
+        self.episode_number += 1
 
         # Choose a random target number between 0 and 9
         self.target_number = np.random.randint(0, 10)
@@ -110,14 +112,14 @@ class NumberRecognitionEnv(gym.Env):
         return observation
 
     def update_explored_map(self):
-        # Mark the current position as explored and set its value in explored_map
+        # 현재 위치를 탐색된 것으로 표시하고 explored_map에 해당 값을 설정
         x, y = self.current_position
 
-        # Assume `actual_map` is the true underlying map of the target digit (0 and 1 matrix for the target number)
-        actual_map = self.mnist_data[self.target_number][0]  # Example usage, using the first sample of the target number
+        # self.target_number에 대한 MNIST 샘플 중 무작위로 하나를 선택
+        actual_map = random.choice(self.mnist_data[self.target_number])
 
-        # Update explored_map with the actual value at (x, y)
-        self.explored_map[x, y] = actual_map[x, y]  # Set to 1 if the actual map has a 1, otherwise set to 0
+        # 현재 위치의 explored_map 값을 actual_map의 해당 값으로 설정
+        self.explored_map[x, y] = actual_map[x, y]
 
     def update_probabilities(self):
         """
@@ -150,7 +152,10 @@ class NumberRecognitionEnv(gym.Env):
         # Normalize to make it a probability distribution
         total_score = np.sum(probabilities)
         if total_score > 0:
-            probabilities = probabilities / total_score
+            #probabilities = probabilities / total_score
+            probabilities = np.exp(probabilities) / np.sum(np.exp(probabilities))  # Apply softmax for sharper distribution
+        else:
+            probabilities = np.ones(10)/10
 
         return probabilities
 

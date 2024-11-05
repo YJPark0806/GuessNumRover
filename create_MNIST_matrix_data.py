@@ -36,7 +36,7 @@ def preprocess_and_save_mnist():
 
     # Save the dictionary to a .npy file in the current directory
     np.save("mnist_data.npy", mnist_data)
-    print("MNIST data has been processed with 5000 samples per digit and saved as 'mnist_data.npy'.")
+    print("MNIST data has been processed with 100 samples per digit and saved as 'mnist_data.npy'.")
 
     # Print the number of samples for each digit
     for digit in range(10):
