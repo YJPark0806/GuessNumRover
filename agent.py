@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 from env import NumberRecognitionEnv  # Import the NumberRecognitionEnv class from env.py
 
 
@@ -11,13 +12,12 @@ def train_agent():
     """
     # Initialize the custom environment
     env = NumberRecognitionEnv()
-
     # Initialize the PPO agent
     model = PPO("MlpPolicy", env, verbose=1)
 
     # Train the agent
     print("Starting training...")
-    model.learn(total_timesteps=30)  # Set the number of timesteps for training
+    model.learn(total_timesteps=300000)  # Set the number of timesteps for training
     print("Training completed.")
 
     # Save the trained model
@@ -66,7 +66,7 @@ def test_agent():
 
 if __name__ == "__main__":
     # Train the agent
-    train_agent()
+    #train_agent()
 
     # Test the trained agent
-    #test_agent()
+    test_agent()
