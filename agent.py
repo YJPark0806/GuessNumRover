@@ -17,7 +17,11 @@ def train_agent():
 
     # Train the agent
     print("Starting training...")
+<<<<<<< HEAD
     model.learn(total_timesteps=300000)  # Set the number of timesteps for training
+=======
+    model.learn(total_timesteps=1000)  # Set the number of timesteps for training
+>>>>>>> upstream/master
     print("Training completed.")
 
     # Save the trained model
@@ -26,7 +30,7 @@ def train_agent():
 
     # Evaluate the trained model
     print("Evaluating the trained model...")
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=200)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5)
     print(f"Mean reward: {mean_reward} +/- {std_reward}")
 
 

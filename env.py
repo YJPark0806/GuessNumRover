@@ -65,7 +65,6 @@ class NumberRecognitionEnv(gym.Env):
     def step(self, action):
         # Increment the step counter
         self.current_step += 1
-        #print(f"step {self.current_step}")
 
         # Handle movement actions
         if action == 0:  # Move up
@@ -81,20 +80,19 @@ class NumberRecognitionEnv(gym.Env):
         self.update_explored_map()
         self.update_probabilities()
 
-        # Print the probabilities vector after each step
-        #print("Probabilities vector:", self.probabilities)
-        #print('==================================================================')
-
         # Calculate reward and check if episode is done
         reward = self.calculate_reward()
         self.cumulative_reward += reward
 
         # Check termination conditions
         done = False
-        if np.sum(self.probabilities > 0.8) == 1:  # End if one number is highly likely
+        guessed_number = np.argmax(self.probabilities)
+
+        # Check if the correct number has been identified with high confidence
+        if guessed_number == self.target_number and self.probabilities[guessed_number] > 0.95:
+            reward += 100  # Large reward for correctly identifying the number
             done = True
             print(f"Episode {self.episode_number} finished.")
-            guessed_number = np.argmax(self.probabilities)
             print("Probabilities vector at episode end:", self.probabilities)
             print(f"Answer: {self.target_number}, Guessed: {guessed_number}, Return: {self.cumulative_reward}")
 
@@ -102,7 +100,6 @@ class NumberRecognitionEnv(gym.Env):
         elif self.current_step >= self.max_steps:
             done = True
             print(f"Episode {self.episode_number} terminated due to reaching max steps of {self.max_steps}.")
-            guessed_number = np.argmax(self.probabilities)
             print("Probabilities vector at max steps:", self.probabilities)
             print(f"Answer: {self.target_number}, Guessed: {guessed_number}, Return: {self.cumulative_reward}")
 
