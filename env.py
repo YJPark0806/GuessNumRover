@@ -26,7 +26,7 @@ class NumberRecognitionEnv(gym.Env):
 
         # Initialize other variables
         self.episode_number = 0  # Track episode number
-        self.max_steps = 1000  # Maximum steps per episode
+        self.max_steps = 2000  # Maximum steps per episode
         self.reset()
 
     def reset(self):
@@ -101,21 +101,21 @@ class NumberRecognitionEnv(gym.Env):
         self.cumulative_reward += reward
 
         # Print the current step information
-        '''
+
         print(
             f"Step {self.current_step} | Current Position {self.current_position} | Probability Score {self.probabilities}")
-        '''
+
 
         # Check termination conditions
         done = False
 
         # Check if the largest probability value constitutes 95% or more of the total
-        if np.max(self.probabilities) >= 0.95 * np.sum(self.probabilities) and self.current_step >= 100:
+        if np.max(self.probabilities) >= 0.5 * np.sum(self.probabilities) and self.current_step >= 100:
             done = True
             guessed_number = np.argmax(self.probabilities)
             if guessed_number == self.target_number:
-                reward += 100  # Additional reward for correct guess
-                print("Correct guess! +100 reward.")
+                reward += 500  # Additional reward for correct guess
+                print("Correct guess! +500 reward.")
             print(f"Episode {self.episode_number} finished due to high confidence in one candidate.")
             print("Probabilities vector at episode end:", self.probabilities)
             print(f"Answer: {self.target_number}, Guessed: {guessed_number}, Return: {self.cumulative_reward}")
@@ -192,19 +192,19 @@ class NumberRecognitionEnv(gym.Env):
         # ex) [3, 8, 5] -> [8, 5, 3]
 
         # Check if top 3 probabilities make up more than 90% of the total
-        if np.sum(sorted_probabilities[:3]) >= 0.9 * np.sum(self.probabilities):
-            reward += 3
-        elif np.sum(sorted_probabilities[:3]) >= 0.7 * np.sum(self.probabilities):
-            reward += 2
+        if np.sum(sorted_probabilities[:3]) >= 0.7 * np.sum(self.probabilities):
+            reward += 10
+        elif np.sum(sorted_probabilities[:3]) >= 0.6 * np.sum(self.probabilities):
+            reward += 5
         elif np.sum(sorted_probabilities[:3]) >= 0.5 * np.sum(self.probabilities):
-            reward += 1
+            reward += 3
 
         # Check if top 2 probabilities make up more than 90% of the total
-        if np.sum(sorted_probabilities[:2]) >= 0.9 * np.sum(self.probabilities):
+        if np.sum(sorted_probabilities[:2]) >= 0.6 * np.sum(self.probabilities):
+            reward += 10
+        elif np.sum(sorted_probabilities[:2]) >= 0.5 * np.sum(self.probabilities):
             reward += 5
-        elif np.sum(sorted_probabilities[:2]) >= 0.8 * np.sum(self.probabilities):
-            reward += 4
-        elif np.sum(sorted_probabilities[:2]) >= 0.7 * np.sum(self.probabilities):
+        elif np.sum(sorted_probabilities[:2]) >= 0.4 * np.sum(self.probabilities):
             reward += 3
 
         # Penalty for each step to encourage efficient exploration
