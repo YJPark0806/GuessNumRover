@@ -20,9 +20,12 @@ class NumberRecognitionEnv(gym.Env):
         # Actions: 0 - Up, 1 - Down, 2 - Left, 3 - Right
         self.action_space = spaces.Discrete(4)
 
-        # Define observation space as a single Box space by flattening map_data and probabilities
-        # map_data is 50x50 and probabilities is 10, so total dimension is 50*50 + 10
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(50 * 50 + 10,), dtype=np.float32)
+        # Define observation space as a single Box space by flattening map_data, probabilities, and robot's position
+        # map_data is 50x50, probabilities is 10, robot position (x, y) is 2
+        # Total observation space size: 2500 (map_data) + 10 (probabilities) + 2 (robot position)
+        self.observation_space = spaces.Box(
+            low=-1, high=1, shape=(50 * 50 + 10 + 2,), dtype=np.float32
+        )
 
         # Initialize other variables
         self.episode_number = 0  # Track episode number
@@ -100,12 +103,6 @@ class NumberRecognitionEnv(gym.Env):
         reward += self.calculate_reward()
         self.cumulative_reward += reward
 
-        # Print the current step information
-
-        print(
-            f"Step {self.current_step} | Current Position {self.current_position} | Probability Score {self.probabilities}")
-
-
         # Check termination conditions
         done = False
 
@@ -131,9 +128,10 @@ class NumberRecognitionEnv(gym.Env):
         return self.get_observation(), reward, done, {}
 
     def get_observation(self):
-        # Flatten the explored_map and concatenate with probabilities to create a single observation vector
+        # Flatten the explored_map and concatenate with probabilities and robot's current position
         map_data_flattened = self.explored_map.flatten()
-        observation = np.concatenate([map_data_flattened, self.probabilities]).astype(np.float32)
+        robot_position = np.array(self.current_position) / 50.0  # Normalize position to [0, 1]
+        observation = np.concatenate([map_data_flattened, self.probabilities / 10000, robot_position]).astype(np.float32)
         return observation
 
     def update_explored_map(self):
@@ -173,13 +171,6 @@ class NumberRecognitionEnv(gym.Env):
                 match_matrix = (explored_map != -1) * data_matrix  # Only consider explored parts
                 score += np.sum((explored_map == 1) * match_matrix)  # Match only where explored_map == 1 and data_matrix == 1
             probabilities[number] = score
-            #print(f"Score for: {number}, is: {score}")
-        '''
-        # Normalize to make it a probability distribution
-        total_score = np.sum(probabilities)
-        if total_score > 0:
-            probabilities = probabilities / total_score
-        '''
 
         return probabilities
 
@@ -191,21 +182,22 @@ class NumberRecognitionEnv(gym.Env):
         sorted_probabilities = np.sort(self.probabilities)[::-1]
         # ex) [3, 8, 5] -> [8, 5, 3]
 
-        # Check if top 3 probabilities make up more than 90% of the total
-        if np.sum(sorted_probabilities[:3]) >= 0.7 * np.sum(self.probabilities):
-            reward += 10
-        elif np.sum(sorted_probabilities[:3]) >= 0.6 * np.sum(self.probabilities):
-            reward += 5
-        elif np.sum(sorted_probabilities[:3]) >= 0.5 * np.sum(self.probabilities):
-            reward += 3
+        if sum(self.probabilities) != 0:
+            # Check if top 3 probabilities make up more than 90% of the total
+            if np.sum(sorted_probabilities[:3]) >= 0.7 * np.sum(self.probabilities):
+                reward += 10
+            elif np.sum(sorted_probabilities[:3]) >= 0.6 * np.sum(self.probabilities):
+                reward += 5
+            elif np.sum(sorted_probabilities[:3]) >= 0.5 * np.sum(self.probabilities):
+                reward += 3
 
-        # Check if top 2 probabilities make up more than 90% of the total
-        if np.sum(sorted_probabilities[:2]) >= 0.6 * np.sum(self.probabilities):
-            reward += 10
-        elif np.sum(sorted_probabilities[:2]) >= 0.5 * np.sum(self.probabilities):
-            reward += 5
-        elif np.sum(sorted_probabilities[:2]) >= 0.4 * np.sum(self.probabilities):
-            reward += 3
+            # Check if top 2 probabilities make up more than 90% of the total
+            if np.sum(sorted_probabilities[:2]) >= 0.6 * np.sum(self.probabilities):
+                reward += 10
+            elif np.sum(sorted_probabilities[:2]) >= 0.5 * np.sum(self.probabilities):
+                reward += 5
+            elif np.sum(sorted_probabilities[:2]) >= 0.4 * np.sum(self.probabilities):
+                reward += 3
 
         # Penalty for each step to encourage efficient exploration
         reward -= 0.05
@@ -217,7 +209,7 @@ class NumberRecognitionEnv(gym.Env):
         plt.ion()
 
         # Display the current explored map with the robot's current position in red
-        plt.figure(1)  # Use a single figure ID to keep the same window
+        plt.figure(1, figsize=(8, 10))  # Increase figure size for better visualization
         plt.clf()  # Clear the current content to update
 
         # Copy the explored map and highlight the current position
@@ -231,9 +223,30 @@ class NumberRecognitionEnv(gym.Env):
         cmap = plt.cm.gray
         cmap.set_over('red')  # Set 'over' color to red for the robot's position
 
+        # Plot the explored map
+        plt.subplot(2, 1, 1)  # Subplot 1 for the map
         plt.imshow(explored_map_with_robot, cmap=cmap, vmax=1.5)  # Use vmax=1.5 to show red for the robot position
-        plt.title(f"Explored Map - Step {self.current_step}")
+        plt.title(f"Explored Map - Step {self.current_step}", fontsize=16)
         plt.axis("off")
+
+        # Display reward, probabilities, predicted number, and answer in subplot 2
+        plt.subplot(2, 1, 2)  # Subplot 2 for text info
+        plt.axis("off")  # Turn off axis for clean display
+
+        # Calculate current predicted number
+        guessed_number = np.argmax(self.probabilities)
+
+        # Display relevant information
+        reward_text = f"Reward at Step {self.current_step}: {self.cumulative_reward:.2f}"
+        probability_text = f"Similarity Score: {np.array2string(self.probabilities, precision=2, separator=',')}"
+        guessed_text = f"Predicted Number: {guessed_number}"
+        answer_text = f"Answer: {self.target_number}"
+
+        plt.text(0.1, 0.8, reward_text, fontsize=12, color='blue')
+        plt.text(0.1, 0.6, probability_text, fontsize=10, color='green')
+        plt.text(0.1, 0.4, guessed_text, fontsize=12, color='orange')
+        plt.text(0.1, 0.2, answer_text, fontsize=12, color='red')
 
         plt.draw()  # Draw the updated figure
         plt.pause(0.5)  # Pause briefly to allow for the update
+

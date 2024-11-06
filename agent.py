@@ -13,11 +13,11 @@ def train_agent():
     env = NumberRecognitionEnv()
 
     # Initialize the PPO agent with TensorBoard logging
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./number_recognition_tensorboard/")
+    model = PPO("MlpPolicy", env, ent_coef=0.05, verbose=1, tensorboard_log="./number_recognition_tensorboard/")
 
     # Train the agent
     print("Starting training...")
-    model.learn(total_timesteps=200000, log_interval=10)  # Set the number of timesteps for training
+    model.learn(total_timesteps=2000, log_interval=10)  # Set the number of timesteps for training
     print("Training completed.")
 
     # Save the trained model
@@ -26,7 +26,7 @@ def train_agent():
 
     # Evaluate the trained model
     print("Evaluating the trained model...")
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=20)
     print(f"Mean reward: {mean_reward} +/- {std_reward}")
 
 
@@ -49,7 +49,7 @@ def test_agent():
 
     while not done:
         # Predict the next action
-        action, _states = model.predict(obs, deterministic=True)
+        action, _states = model.predict(obs, deterministic=False)
 
         # Take the action in the environment
         obs, reward, done, info = env.step(action)
@@ -66,10 +66,12 @@ def test_agent():
 
 if __name__ == "__main__":
     # Train the agent
+
     train_agent()
 
     # Test the trained agent
+
     #test_agent()
 
     # To visualize training in TensorBoard, run this command in your terminal:
-    # tensorboard --logdir=./number_recognition_tensorboard/
+    # tensorboard --logdir=./number_recognition_tensorboard/PPO_7
